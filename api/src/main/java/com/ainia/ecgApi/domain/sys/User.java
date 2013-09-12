@@ -6,7 +6,6 @@ import java.util.Set;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -20,7 +19,9 @@ import javax.persistence.Transient;
 import javax.persistence.Version;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.hibernate.validator.constraints.Email;
 import org.hibernate.validator.constraints.NotBlank;
+import org.joda.time.DateTime;
 
 import com.ainia.ecgApi.core.bean.Domain;
 import com.ainia.ecgApi.domain.health.HealthRule;
@@ -50,8 +51,10 @@ public class User implements Domain {
 	private String address;
 	private Float  stature;
 	private Float  weight;
+	private String email;
 	private String idCard;
-	private int gender;
+	private Integer gender;
+	private Integer married;
 	private String city;
 	private String emContact1;
 	private String emContact1Tel;
@@ -65,6 +68,13 @@ public class User implements Domain {
 	private Boolean isFree;
 	private Integer version;
 	private Set<HealthRule> rules;
+	private Date lastLoginDate;
+	private Date tokenDate;
+	
+	private String salt;
+	private String retakeCode;
+	private Date   retakeDate;
+	private Integer retakeCount;
 	
 	@PrePersist
 	public void onCreate() {
@@ -83,6 +93,18 @@ public class User implements Domain {
 	public String getMobilePrefix () {
 		return mobile == null?null : mobile.substring(7);
 	}
+	@Transient
+	public boolean isMan() { 
+		return this.gender == 1;
+	}
+	@Transient
+	public Integer getAge() {
+		if (this.birthday != null) {
+			return new DateTime().getYear() - new DateTime(this.birthday).getYear();
+		}
+		return null;
+	}
+	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	public Long getId() {
@@ -125,11 +147,11 @@ public class User implements Domain {
 		this.password = password;
 	}
 
-	public int getGender() {
+	public Integer getGender() {
 		return gender;
 	}
 
-	public void setGender(int gender) {
+	public void setGender(Integer gender) {
 		this.gender = gender;
 	}
 
@@ -180,7 +202,13 @@ public class User implements Domain {
 	public void setCity(String city) {
 		this.city = city;
 	}
-
+	@Email
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
 	public String getEmContact1() {
 		return emContact1;
 	}
@@ -301,6 +329,50 @@ public class User implements Domain {
 	public void setIdCard(String idCard) {
 		this.idCard = idCard;
 	}
+	
+	@JsonIgnore
+	public String getRetakeCode() {
+		return retakeCode;
+	}
+	public void setRetakeCode(String retakeCode) {
+		this.retakeCode = retakeCode;
+	}
+	@JsonIgnore
+	public Date getRetakeDate() {
+		return retakeDate;
+	}
+	public void setRetakeDate(Date retakeDate) {
+		this.retakeDate = retakeDate;
+	}
+	@JsonIgnore
+	public Integer getRetakeCount() {
+		return retakeCount;
+	}
+	public void setRetakeCount(Integer retakeCount) {
+		this.retakeCount = retakeCount;
+	}
+
+	@JsonFormat(pattern = "yyyy-MM-dd hh:mm" ,  timezone = "GMT+08:00")
+	public Date getLastLoginDate() {
+		return lastLoginDate;
+	}
+	public void setLastLoginDate(Date lastLoginDate) {
+		this.lastLoginDate = lastLoginDate;
+	}
+	@JsonIgnore
+	public String getSalt() {
+		return salt;
+	}
+	public void setSalt(String salt) {
+		this.salt = salt;
+	}
+	@JsonIgnore
+	public Date getTokenDate() {
+		return tokenDate;
+	}
+	public void setTokenDate(Date tokenDate) {
+		this.tokenDate = tokenDate;
+	}
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -308,6 +380,8 @@ public class User implements Domain {
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		return result;
 	}
+
+	
 
 	@Override
 	public boolean equals(Object obj) {
@@ -330,5 +404,12 @@ public class User implements Domain {
 	public String toString() {
 		return ToStringBuilder.reflectionToString(this);
 	}
+	public Integer getMarried() {
+		return married;
+	}
+	public void setMarried(Integer married) {
+		this.married = married;
+	}
+
 
 }

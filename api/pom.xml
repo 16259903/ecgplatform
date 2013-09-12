@@ -28,13 +28,25 @@
     <junit.version>4.11</junit.version>
     <joda-time.version>2.2</joda-time.version>
     <dozer.version>5.4.0</dozer.version>
-                    
+    <log.level>WARN</log.level>
+    <quartz.version>2.1.7</quartz.version>
+    
+    <jdbc.driver.groupId>mysql</jdbc.driver.groupId>
+    <jdbc.driver.artifactId>mysql-connector-java</jdbc.driver.artifactId>
+    <jdbc.driver.version>5.1.21</jdbc.driver.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jdk.version>1.6</jdk.version>
   </properties>
 
    <dependencies>
-       <!-- spring start -->
+    <!-- jdbc driver -->
+    <dependency>
+        <groupId>${jdbc.driver.groupId}</groupId>
+        <artifactId>${jdbc.driver.artifactId}</artifactId>
+        <version>${jdbc.driver.version}</version>
+        <scope>runtime</scope>
+    </dependency>
+    <!-- spring start -->
     <dependency>
         <groupId>org.springframework</groupId>
         <artifactId>spring-core</artifactId>
@@ -72,9 +84,9 @@
         <version>${spring.version}</version>
     </dependency>
     <dependency>
-	<groupId>org.springframework</groupId>
-	<artifactId>spring-jdbc</artifactId>
-	<version>${spring.version}</version>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-jdbc</artifactId>
+    <version>${spring.version}</version>
     </dependency>
     <!-- spring end -->
     <!-- hibernate start -->
@@ -294,16 +306,85 @@
     </dependency>
     <!-- jfreechart start-->
     <dependency>
-		<groupId>org.jfree</groupId>
-		<artifactId>jfreechart</artifactId>
-		<version>1.0.15</version>
+        <groupId>org.jfree</groupId>
+        <artifactId>jfreechart</artifactId>
+        <version>1.0.15</version>
+        <exclusions>
+          <exclusion>
+              <groupId>com.lowagie</groupId>
+              <artifactId>itext</artifactId>
+          </exclusion>
+        </exclusions>
     </dependency> 
     <!-- jfreechart end -->
+    <!-- urlrewrite start -->
+    <dependency>
+      <groupId>org.tuckey</groupId>
+      <artifactId>urlrewrite</artifactId>
+      <version>2.5.2</version>
+    </dependency>
+    <!-- urlrewrite end -->
+    <!-- TIMER -->
+    <dependency>
+        <groupId>org.quartz-scheduler</groupId>
+        <artifactId>quartz</artifactId>
+        <version>${quartz.version}</version>
+    </dependency>
+    <!-- httpClient start -->
+    <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>4.2.3</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpcore</artifactId>
+        <version>4.2.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpmime</artifactId>
+      <version>4.2.3</version>
+    </dependency>    
+    <!-- httpClient end -->
+    <!-- opencsv start -->
+    <dependency>
+      <groupId>net.sf.opencsv</groupId>
+      <artifactId>opencsv</artifactId>
+      <version>2.3</version>
+    </dependency>    
+
+    <dependency>
+      <groupId>com.lowagie</groupId>
+      <artifactId>itext</artifactId>
+      <version>2.1.7</version>
+    </dependency>
+
+
+    <dependency>
+      <groupId>com.lowagie</groupId>
+      <artifactId>itextAsian</artifactId>
+      <version>1.4.2_12-b03</version>
+    </dependency>
+    <!-- opencsv end -->
+    <!-- rest doc start -->
+    <!--dependency>
+        <groupId>com.mangofactory</groupId>
+        <artifactId>swagger-springmvc</artifactId>
+        <version>0.6.0-SNAPSHOT</version>
+    </dependency-->
+    <!-- rest doc end -->
  </dependencies>
 
 
   
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <finalName>ecgApi</finalName>
     <pluginManagement>
         <plugins>
@@ -323,6 +404,18 @@
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>2.6</version>
             </plugin>
+            <!--
+            <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
+               <artifactId>maven-surefire-plugin</artifactId>
+               <version>2.7.3</version>
+               <configuration>
+                 <includes>
+                   <include>**/*Test.java</include>
+                 </includes>
+               </configuration>
+            </plugin>
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -333,6 +426,13 @@
                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                         </manifest>
                     </archive>
+                    <excludes>  
+                        <exclude>**/*.properties</exclude>  
+                        <exclude>**/*.xml</exclude>  
+                        <exclude>**/*.sql</exclude> 
+                        <exclude>sql</exclude>
+                        <exclude>mapping</exclude> 
+                    </excludes>  
                 </configuration>
             </plugin>
             <plugin>
@@ -345,6 +445,19 @@
                 <artifactId>jetty-maven-plugin</artifactId>
                 <version>${jetty.version}</version>
                 <configuration>
+                <connectors>
+                    <connector implementation="org.eclipse.jetty.server.nio.SelectChannelConnector">
+                        <port>8080</port>
+                        <maxIdleTime>60000</maxIdleTime>
+                    </connector>
+                    <connector implementation="org.eclipse.jetty.server.ssl.SslSocketConnector">
+                        <port>8443</port>
+                        <maxIdleTime>60000</maxIdleTime>
+                        <keystore>server.jks</keystore>
+                        <password>password</password>
+                        <keyPassword>password</keyPassword>
+                    </connector>
+                  </connectors>
                   <systemProperties>
                     <systemProperty>
                       <name>spring.profiles.active</name>
@@ -400,57 +513,57 @@
                 </executions>
               </plugin>
               <!-- data init -->
-		      <plugin>
-		        <groupId>org.codehaus.mojo</groupId>
-		        <artifactId>sql-maven-plugin</artifactId>
-		        <version>1.5</version>
-		
-		        <dependencies>
-		            <!-- specify the dependent jdbc driver here -->
-				    <dependency>
-				        <groupId>com.h2database</groupId>
-				        <artifactId>h2</artifactId>
-				        <version>${h2.version}</version>
-				    </dependency>
-		        </dependencies>
-		
-		        <!-- common configuration shared by all executions -->
-		        <configuration>
-		          <driver>org.h2.Driver</driver>
-		          <url>jdbc:h2:mem:ecg</url>
-		          <username>sa</username>
-		          <encoding>${project.build.sourceEncoding}</encoding>
-		          <!-- You can comment out username/password configurations and
-		               have maven to look them up in your settings.xml using ${settingsKey}
-		          -->
-		          <!-- settingsKey>sensibleKey</settingsKey-->
-		          <!--all executions are ignored if -Dmaven.test.skip=true-->
-		          <skip>${maven.test.skip}</skip>
-		        </configuration>
-		
-		        <executions>
-		          <!-- drop db after test -->
-		          <execution>
-		            <id>initialize db</id>
-		            <phase>process-test-resources</phase>
-		            <goals>
-		              <goal>execute</goal>
-		            </goals>
-		            <configuration>  
-		                <autocommit>true</autocommit>  
-		                <srcFiles>  
-		                  <srcFile>src/main/resources/sql/h2/schema.sql</srcFile> 
-		                  <srcFile>src/main/resources/sql/h2/data.sql</srcFile>  
-		                </srcFiles>  
-		              </configuration> 
-		          </execution>
-		        </executions>
-		      </plugin>
-		      <plugin>
-		          <groupId>com.pp</groupId>
-		          <artifactId>codeGenerator</artifactId>
-		          <version>0.0.2</version>
-		      </plugin>
+              <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>sql-maven-plugin</artifactId>
+                <version>1.5</version>
+        
+                <dependencies>
+                    <!-- specify the dependent jdbc driver here -->
+                    <dependency>
+                        <groupId>com.h2database</groupId>
+                        <artifactId>h2</artifactId>
+                        <version>${h2.version}</version>
+                    </dependency>
+                </dependencies>
+        
+                <!-- common configuration shared by all executions -->
+                <configuration>
+                  <driver>org.h2.Driver</driver>
+                  <url>jdbc:h2:mem:ecg</url>
+                  <username>sa</username>
+                  <encoding>${project.build.sourceEncoding}</encoding>
+                  <!-- You can comment out username/password configurations and
+                       have maven to look them up in your settings.xml using ${settingsKey}
+                  -->
+                  <!-- settingsKey>sensibleKey</settingsKey-->
+                  <!--all executions are ignored if -Dmaven.test.skip=true-->
+                  <skip>${maven.test.skip}</skip>
+                </configuration>
+        
+                <executions>
+                  <!-- drop db after test -->
+                  <execution>
+                    <id>initialize db</id>
+                    <phase>process-test-resources</phase>
+                    <goals>
+                      <goal>execute</goal>
+                    </goals>
+                    <configuration>  
+                        <autocommit>true</autocommit>  
+                        <srcFiles>  
+                          <srcFile>src/main/resources/sql/h2/schema.sql</srcFile> 
+                          <srcFile>src/main/resources/sql/h2/data.sql</srcFile>  
+                        </srcFiles>  
+                      </configuration> 
+                  </execution>
+                </executions>
+              </plugin>
+              <plugin>
+                  <groupId>com.pp</groupId>
+                  <artifactId>codeGenerator</artifactId>
+                  <version>0.0.2</version>
+              </plugin>
         </plugins>
     </pluginManagement>
   </build>

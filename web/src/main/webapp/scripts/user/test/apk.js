@@ -9,11 +9,11 @@ define(function(require, exports) {
             httpProvider = angluarjs.httpProvider,
             UserService = services.UserService;
 
-        // 登录
-        var user;
+        var user, hacker;
+        // 注册用户
         it("the user should be created by user/apk.", function(done) {
             user = {
-                mobile: 13 + (new Date()).getTime().toString().substring(0, 9),
+                mobile: 18 + (new Date()).getTime().toString().substring(0, 9),
                 name: '测试用户',
                 password: 'passw0rd'
             };
@@ -22,7 +22,10 @@ define(function(require, exports) {
                 data: {
                     'mobile': user.mobile,
                     'name': user.name,
-                    'password': user.password
+                    'password': user.password,
+                    'email': user.mobile + '@test.com',
+                    'gender': 1, // 男性
+                    'married': 1 // 已婚
                 },
                 type: 'POST'
             }).then(function() {
@@ -36,11 +39,38 @@ define(function(require, exports) {
             });
         });
 
-        it("the user should not be created by user/apk.", function(done) {
+        it("the hacker should be created by user/apk.", function(done) {
+            hacker = {
+                mobile: 19 + (new Date()).getTime().toString().substring(0, 9),
+                name: '黑客',
+                password: 'passw0rd'
+            };
             $.ajax({
                 url: PATH + '/api/user',
                 data: {
-                    'mobile': user.mobile,
+                    'mobile': hacker.mobile,
+                    'name': hacker.name,
+                    'password': hacker.password,
+                    'email': hacker.mobile + '@test.com'
+                },
+                type: 'POST'
+            }).then(function() {
+                if (arguments[2].status === 201) {
+                    done();
+                } else {
+                    throw new Error('failed to get a 201 status code.');
+                }
+            }, function() {
+                throw new Error('failed to create a user');
+            });
+        });
+
+        // 不能注册2次
+        it("the user should not be created by user/apk with the same username again.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user',
+                data: {
+                    'username': user.mobile,
                     'name': user.name,
                     'password': user.password
                 },
@@ -52,9 +82,27 @@ define(function(require, exports) {
             });
         });
 
+        // 相同邮箱不能继续注册
+        it("the user should not be created by user/apk with the same email again.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user',
+                data: {
+                    'mobile': user.mobile + '1',
+                    'name': user.name,
+                    'password': user.password,
+                    'email': user.mobile + '@test.com'
+                },
+                type: 'POST'
+            }).then(function(res) {
+                throw new Error('should not created a user');
+            }, function() {
+                done();
+            });
+        });
+
         // 登录
-        var token;
-        it("the new user should authenciated.", function(done) {
+        var token, hacktoken;
+        it("the new user should be authenciated.", function(done) {
             $.ajax({
                 url: PATH + '/api/user/auth',
                 data: {
@@ -64,6 +112,7 @@ define(function(require, exports) {
                 type: 'POST',
                 dataType: 'json'
             }).then(function(res) {
+                expect(res.userId).not.to.be(undefined);
                 expect(res.token).not.to.be(undefined);
                 token = res.token;
                 done();
@@ -72,38 +121,72 @@ define(function(require, exports) {
             });
         });
 
+        it("the hacker should be authenciated.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/auth',
+                data: {
+                    'username': hacker.mobile,
+                    'password': hacker.password
+                },
+                type: 'POST',
+                dataType: 'json'
+            }).then(function(res) {
+                expect(res.token).not.to.be(undefined);
+                hacktoken = res.token;
+                done();
+            }, function() {
+                throw new Error('failed to authnenciate as a new hacker.');
+            });
+        });
+
+        it("the new user should not be authenciated with mobile.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/auth',
+                data: {
+                    'mobile': user.mobile,
+                    'password': user.password
+                },
+                type: 'POST',
+                dataType: 'json'
+            }).then(function(res) {
+                throw new Error('failed to authnenciate with mobile.');
+            }, function() {
+                done();
+            });
+        });
+
         // 没有token
-        it("the user's info should not retrieved without token.", function(done) {
+        it("the user's info should not be retrieved without token.", function(done) {
             $.ajax({
                 url: PATH + '/api/user?mobile=' + user.mobile,
                 dataType: 'json'
             }).then(function(res) {
                 throw new Error('should not retrieved without token.');
             }, function() {
-                done()
+                done();
             });
         });
 
         // 错的token
-        it("the user's info should not retrieved with empty token.", function(done) {
+        it("the user's info should not be retrieved with invalid token.", function(done) {
             $.ajax({
                 url: PATH + '/api/user?mobile=' + user.mobile,
                 dataType: 'json',
-                header: {Authorization: 'invalid'}
+                headers: {Authorization: 'invalid'}
             }).then(function(res) {
                 throw new Error('should not retrieved with invalid token.');
             }, function() {
-                done()
+                done();
             });
         });
 
         // 获取id
         var userId;
-        it("the user's info should not retrieved with valid token.", function(done) {
+        it("the user's info should be retrieved with valid token.", function(done) {
             $.ajax({
                 url: PATH + '/api/user?username=' + user.mobile,
                 dataType: 'json',
-                header: {Authorization: token}
+                headers: {Authorization: token}
             }).then(function(res) {
                 expect(res).not.to.be(undefined);
                 expect(res.datas).not.to.be(undefined);
@@ -124,7 +207,7 @@ define(function(require, exports) {
             }).then(function(res) {
                 throw new Error('should not retrieved without token.');
             }, function() {
-                done()
+                done();
             });
         });
 
@@ -133,11 +216,11 @@ define(function(require, exports) {
             $.ajax({
                 url: PATH + '/api/user/' + userId,
                 dataType: 'json',
-                header: {Authorization: 'invalid'}
+                headers: {Authorization: 'invalid'}
             }).then(function(res) {
                 throw new Error('should not retrieved with invalid token.');
             }, function() {
-                done()
+                done();
             });
         });
 
@@ -146,9 +229,11 @@ define(function(require, exports) {
             $.ajax({
                 url: PATH + '/api/user/' + userId,
                 dataType: 'json',
-                header: {Authorization: token}
+                headers: {Authorization: token}
             }).then(function(res) {
-                done()
+                expect(res.gender).to.be(1);
+                expect(res.married).to.be(1);
+                done();
             }, function() {
                 throw new Error('should not retrieved with invalid token.');
             });
@@ -163,7 +248,7 @@ define(function(require, exports) {
             }).then(function(res) {
                 throw new Error('should not updated without token.');
             }, function() {
-                done()
+                done();
             });
         });
 
@@ -173,23 +258,54 @@ define(function(require, exports) {
                 url: PATH + '/api/user/' + userId,
                 type: 'PUT',
                 data: user,
-                header: {Authorization: 'invalid'}
+                headers: {Authorization: 'invalid'}
             }).then(function(res) {
                 throw new Error('should not updated with invalid token.');
             }, function() {
-                done()
+                done();
             });
         });
 
-        // 修改个人资料
-        it("the user's info should updated with valid token.", function(done) {
+        // hacker的token不能修改个人资料
+        it("the user's info should not updated with hacker's token.", function(done) {
             $.ajax({
                 url: PATH + '/api/user/' + userId,
                 type: 'PUT',
                 data: user,
-                header: {Authorization: token}
+                headers: {Authorization: hacktoken}
             }).then(function(res) {
-                done()
+                throw new Error('should not updated with hacker\'s token.');
+            }, function() {
+                done();
+            });
+        });
+
+        // 修改个人资料 如果不传递gender和married,数据将不会被修改
+        it("the user's info should updated with valid token.", function(done) {
+            delete user.gender;
+            delete user.married;
+            $.ajax({
+                url: PATH + '/api/user/' + userId,
+                type: 'PUT',
+                data: user,
+                headers: {Authorization: token}
+            }).then(function(res) {
+                done();
+            }, function() {
+                throw new Error('failed to update.');
+            });
+        });
+
+        it("the user's info should retrieve again.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/' + userId,
+                type: 'GET',
+                headers: {Authorization: token}
+            }).then(function(res) {
+                console.info(res);
+                expect(res.gender).to.be(1);
+                expect(res.married).to.be(1);
+                done();
             }, function() {
                 throw new Error('failed to update.');
             });
@@ -204,7 +320,7 @@ define(function(require, exports) {
             }).then(function(res) {
                 throw new Error('should not updated without token.');
             }, function() {
-                done()
+                done();
             });
         });
 
@@ -214,9 +330,23 @@ define(function(require, exports) {
                 url: PATH + '/api/user/' + userId + '/password',
                 type: 'PUT',
                 data: {oldPassword: user.password, newPassword: user.password},
-                header: {Authorization: 'invalid'}
+                headers: {Authorization: 'invalid'}
             }).then(function(res) {
                 throw new Error('should not updated with invalid token.');
+            }, function() {
+                done()
+            });
+        });
+
+        // 黑客的token不能修改密码
+        it("the user's password should not updated with hacker's token.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/' + userId + '/password',
+                type: 'PUT',
+                data: {oldPassword: user.password, newPassword: user.password},
+                headers: {Authorization: hacktoken}
+            }).then(function(res) {
+                throw new Error('should not updated with hacker token.');
             }, function() {
                 done()
             });
@@ -227,12 +357,49 @@ define(function(require, exports) {
             $.ajax({
                 url: PATH + '/api/user/' + userId + '/password',
                 type: 'PUT',
-                data: {oldPassword: user.password, newPassword: user.password},
-                header: {Authorization: token}
+                data: {oldPassword: user.password, newPassword: user.password + 'updated'},
+                headers: {Authorization: token},
+                dataType: 'json'
             }).then(function(res) {
+                expect(res.token).not.to.be(undefined);
+                token = res.token;
                 done()
             }, function() {
                 throw new Error('failed to update.');
+            });
+        });
+
+        // 老密码不能登录
+        it("the user should not authenciated with old password.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/auth',
+                data: {
+                    'username': user.mobile,
+                    'password': user.password
+                },
+                type: 'POST',
+                dataType: 'json'
+            }).then(function(res) {
+                throw new Error('failed to authnenciate with mobile.');
+            }, function() {
+                done();
+            });
+        });
+
+        // 新密码可以登录
+        it("the user should authenciated with new password.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/auth',
+                data: {
+                    'username': user.mobile,
+                    'password': user.password + 'updated'
+                },
+                type: 'POST',
+                dataType: 'json'
+            }).then(function(res) {
+                done();
+            }, function() {
+                throw new Error('failed to authnenciate with mobile.');
             });
         });
 
@@ -248,14 +415,28 @@ define(function(require, exports) {
             });
         });
 
-        // 错的token不能修改密码
+        // 错的token不能获取任务信息
         it("the user's task should not retrieved with invalid token.", function(done) {
             $.ajax({
                 url: PATH + '/api/user/' + userId + '/task',
                 type: 'GET',
-                header: {Authorization: 'invalid'}
+                headers: {Authorization: 'invalid'}
             }).then(function(res) {
                 throw new Error('should not retrieved task with invalid token.');
+            }, function() {
+                done()
+            });
+        });
+
+
+        // 黑客的token不能获取任务信息
+        it("the user's task should not retrieved with hacker's token.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/' + userId + '/task',
+                type: 'GET',
+                headers: {Authorization: hacktoken}
+            }).then(function(res) {
+                throw new Error('should not retrieved task with hacker token.');
             }, function() {
                 done()
             });
@@ -266,7 +447,7 @@ define(function(require, exports) {
             $.ajax({
                 url: PATH + '/api/user/' + userId + '/task',
                 type: 'GET',
-                header: {Authorization: token}
+                headers: {Authorization: token}
             }).then(function(res) {
                 done()
             }, function() {
@@ -274,8 +455,59 @@ define(function(require, exports) {
             });
         });
 
+        // 没有token不能删除所有个人任务
+        it("the user's task should not be deleted without token.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/' + userId + '/task',
+                type: 'DELETE'
+            }).then(function(res) {
+                throw new Error('should not be deleted without token.');
+            }, function() {
+                done();
+            });
+        });
+
+        // 错误的token不能删除所有个人任务
+        it("the user's task should not be deleted without token.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/' + userId + '/task',
+                type: 'DELETE',
+                headers: {Authorization: 'invalid'}
+            }).then(function(res) {
+                throw new Error('should not be deleted in batch.');
+            }, function() {
+                done();
+            });
+        });
+
+        // 黑客的token不能删除所有个人任务
+        it("the user's task should not be deleted with hacker's token.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/' + userId + '/task',
+                type: 'DELETE',
+                headers: {Authorization: hacktoken}
+            }).then(function(res) {
+                throw new Error('should not be deleted in batch.');
+            }, function() {
+                done();
+            });
+        });
+
+        // 正确的token能删除所有个人任务,即使还没有任务
+        it("the user's task should be deleted with token.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/' + userId + '/task',
+                type: 'DELETE',
+                headers: {Authorization: token}
+            }).then(function(res) {
+                done();
+            }, function() {
+                throw new Error('should not be deleted in batch.');
+            });
+        });
+
         // 没有token不能删除
-        it("the user's password should not deleted without empty token.", function(done) {
+        it("the user should not be deleted without empty token.", function(done) {
             $.ajax({
                 url: PATH + '/api/user/' + userId,
                 type: 'DELETE'
@@ -287,11 +519,11 @@ define(function(require, exports) {
         });
 
         // 错的token不能删除
-        it("the user's password should not deleted with invalid token.", function(done) {
+        it("the user should not be deleted with invalid token.", function(done) {
             $.ajax({
-                url: PATH + '/api/user/' + userId + '/password',
+                url: PATH + '/api/user/' + userId,
                 type: 'DELETE',
-                header: {Authorization: 'invalid'}
+                headers: {Authorization: 'invalid'}
             }).then(function(res) {
                 throw new Error('should not deleted with invalid token.');
             }, function() {
@@ -299,12 +531,24 @@ define(function(require, exports) {
             });
         });
 
-        // 自己也不能删除自己
-        it("the user's password should deleted with valid token.", function(done) {
+        // 黑客token不能删除别人账号
+        it("the user should not be deleted with hacker's token.", function(done) {
             $.ajax({
-                url: PATH + '/api/user/' + userId + '/password',
+                url: PATH + '/api/user/' + userId,
                 type: 'DELETE',
-                header: {Authorization: token}
+                headers: {Authorization: hacktoken}
+            }).then(function(res) {
+                throw new Error('should not deleted with hacker token.');
+            }, function() {
+                done()
+            });
+        });
+        // 自己也不能删除自己
+        it("the user should not be deleted with valid token.", function(done) {
+            $.ajax({
+                url: PATH + '/api/user/' + userId,
+                type: 'DELETE',
+                headers: {Authorization: token}
             }).then(function(res) {
                 throw new Error('should to deleted by myself.');
             }, function() {

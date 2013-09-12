@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 public class HealthReply implements Domain {
 	
 	public static final String EXAMINATION_ID = "examinationId";
+	public static final String CREATED_DATE = "createdDate";
 
 	private Long id;
 	private String type;
@@ -93,7 +94,6 @@ public class HealthReply implements Domain {
 		this.content = content;
 	}
 
-	@NotNull
 	public Long getEmployeeId() {
 		return employeeId;
 	}

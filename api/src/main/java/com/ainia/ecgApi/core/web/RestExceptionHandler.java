@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.ainia.ecgApi.core.exception.InfoException;
+import com.ainia.ecgApi.core.exception.PermissionException;
 import com.ainia.ecgApi.core.exception.ServiceException;
 
 /**
@@ -28,13 +30,29 @@ import com.ainia.ecgApi.core.exception.ServiceException;
 @ControllerAdvice
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 
-	    @ExceptionHandler(value = { ServiceException.class })
-	    public final ResponseEntity<AjaxResult> handleException(ServiceException ex, WebRequest request) {
-	    	AjaxResult ajaxResult = new AjaxResult(HttpStatus.INTERNAL_SERVER_ERROR.value());
+	    @ExceptionHandler(value = { PermissionException.class })
+	    public final ResponseEntity<AjaxResult> handleException(PermissionException ex, WebRequest request) {
+	    	AjaxResult ajaxResult = new AjaxResult(HttpStatus.FORBIDDEN.value());
 	    	ajaxResult.setMessage(ex.getErrorMessage());
 	    	ex.printStackTrace();
-	    	return new ResponseEntity<AjaxResult>(ajaxResult , HttpStatus.INTERNAL_SERVER_ERROR);
-	   } 
+	    	return new ResponseEntity<AjaxResult>(ajaxResult , HttpStatus.FORBIDDEN);
+	    } 
+	
+	    @ExceptionHandler(value = { ServiceException.class })
+	    public final ResponseEntity<AjaxResult> handleException(ServiceException ex, WebRequest request) {
+	    	AjaxResult ajaxResult = new AjaxResult(HttpStatus.BAD_REQUEST.value());
+	    	ajaxResult.setMessage(ex.getErrorMessage());
+	    	ex.printStackTrace();
+	    	return new ResponseEntity<AjaxResult>(ajaxResult , HttpStatus.BAD_REQUEST);
+	    }
+	    
+	    @ExceptionHandler(value = { InfoException.class })
+	    public final ResponseEntity<AjaxResult> handleException(InfoException ex, WebRequest request) {
+	    	AjaxResult ajaxResult = new AjaxResult(HttpStatus.BAD_REQUEST.value());
+	    	ajaxResult.setMessage(ex.getErrorMessage());
+	    	ex.printStackTrace();
+	    	return new ResponseEntity<AjaxResult>(ajaxResult , HttpStatus.BAD_REQUEST);
+	    } 
 	    
 	    @ExceptionHandler(value = { ConstraintViolationException.class })
 	    public final ResponseEntity<AjaxResult> handleException(ConstraintViolationException ex, WebRequest request) {
